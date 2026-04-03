@@ -1,0 +1,31 @@
+{
+    "name": "nonsapiens/bigquery-model-sync",
+    "description": "A Laravel library for coordinating batch record-level syncs from the local database, to BigQuery",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Nonsapiens\\BigqueryModelSync\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Stuart Steedman",
+            "email": "stuart@steedman.co.za"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Nonsapiens\\BigqueryModelSync\\BigqueryModelSyncServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.0",
+        "laravel/framework": "^13.0|^12.0",
+        "google/cloud-bigquery": "^1.36"
+    }
+}
