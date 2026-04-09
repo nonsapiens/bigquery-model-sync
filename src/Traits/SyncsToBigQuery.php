@@ -19,5 +19,6 @@ trait SyncsToBigQuery
 
     protected string $batchField = 'sync_batch_uuid';
 
+    protected ?string $bigQueryTableName = null;
 
 }

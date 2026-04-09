@@ -113,7 +113,7 @@ class SetModelCommand extends Command
         }
 
         // Step 11: Update the model class
-        $this->updateModelClass($modelPath, $modelClass, $selectedColumns, $hasGeodata, $mappedGeographyField, $syncOnCreate, $batchField);
+        $this->updateModelClass($modelPath, $modelClass, $selectedColumns, count($columns), $hasGeodata, $mappedGeographyField, $syncOnCreate, $batchField);
 
         $this->info('Done! Model has been configured for BigQuery sync.');
         return self::SUCCESS;
@@ -159,7 +159,7 @@ class SetModelCommand extends Command
             $shortName = $reflection->getShortName();
             $models[$shortName] = [
                 'class' => $class,
-                'path'  => $file->getRealPath(),
+                'path' => $file->getRealPath(),
             ];
         }
 
@@ -209,8 +209,8 @@ class SetModelCommand extends Command
             $dbColumns = DB::select("SHOW COLUMNS FROM `{$table}`");
             foreach ($dbColumns as $col) {
                 $columns[] = [
-                    'name'     => $col->Field,
-                    'type'     => $col->Type,
+                    'name' => $col->Field,
+                    'type' => $col->Type,
                     'nullable' => strtolower($col->Null) === 'yes',
                 ];
             }
@@ -220,8 +220,8 @@ class SetModelCommand extends Command
                 $schemaColumns = Schema::getColumns($table);
                 foreach ($schemaColumns as $col) {
                     $columns[] = [
-                        'name'     => $col['name'],
-                        'type'     => $col['type_name'] ?? $col['type'] ?? 'unknown',
+                        'name' => $col['name'],
+                        'type' => $col['type_name'] ?? $col['type'] ?? 'unknown',
                         'nullable' => $col['nullable'] ?? false,
                     ];
                 }
@@ -285,22 +285,31 @@ PHP;
     protected function updateModelClass(
         string $modelPath,
         string $modelClass,
-        array $selectedColumns,
-        bool $hasGeodata,
+        array  $selectedColumns,
+        int    $totalColumns,
+        bool   $hasGeodata,
         string $mappedGeographyField,
-        bool $syncOnCreate,
+        bool   $syncOnCreate,
         string $batchField
-    ): void {
+    ): void
+    {
         $contents = file_get_contents($modelPath);
 
         // Build trait properties to inject
-        $fieldsArray = "['" . implode("', '", $selectedColumns) . "']";
-        $hasgeoStr   = $hasGeodata ? 'true' : 'false';
-        $syncStr     = $syncOnCreate ? 'true' : 'false';
+        $hasgeoStr = $hasGeodata ? 'true' : 'false';
+        $syncStr = $syncOnCreate ? 'true' : 'false';
 
-        $traitProperties = <<<PHP
+        $allFieldsSelected = count($selectedColumns) === $totalColumns;
 
-    protected array \$fieldsToSync = {$fieldsArray};
+        if ($allFieldsSelected) {
+            $fieldsToSyncProperty = '';
+        } else {
+            $fieldLines = array_map(fn($f) => "        '{$f}',", $selectedColumns);
+            $fieldsArray = "[\n" . implode("\n", $fieldLines) . "\n    ]";
+            $fieldsToSyncProperty = "\n    protected array \$fieldsToSync = {$fieldsArray};\n";
+        }
+
+        $traitProperties = $fieldsToSyncProperty . <<<PHP
 
     protected bool \$hasGeodata = {$hasgeoStr};
 
