@@ -28,14 +28,18 @@ class MakeBigQueryTableCommand extends Command
         if (!class_exists($className)) {
             // Try to prepend app namespace if not found
             $appNamespace = trim(app()->getNamespace(), '\\');
+            
             $potentialClassName = $appNamespace . '\\Models\\' . $className;
             if (class_exists($potentialClassName)) {
                 $className = $potentialClassName;
-            } elseif (class_exists($appNamespace . '\\' . $className)) {
-                $className = $appNamespace . '\\' . $className;
             } else {
-                $this->error("Class {$className} not found.");
-                return self::FAILURE;
+                $potentialClassName = $appNamespace . '\\' . $className;
+                if (class_exists($potentialClassName)) {
+                    $className = $potentialClassName;
+                } else {
+                    $this->error("Class {$className} not found.");
+                    return self::FAILURE;
+                }
             }
         }
 
