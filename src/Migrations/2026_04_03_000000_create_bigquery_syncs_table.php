@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('model', 191)->index();
             $table->string('sync_batch_uuid', 36)->nullable()->index();
-            $table->enum('sync_type', ['create', 'batch']);
+            $table->enum('sync_type', ['create', 'batch', 'replace']);
             $table->unsignedBigInteger('records_synced')->default(0);
             $table->enum('status', ['pending', 'in_progress', 'completed', 'failed', 'cancelled'])->default('pending');
             $table->text('error_message')->nullable();

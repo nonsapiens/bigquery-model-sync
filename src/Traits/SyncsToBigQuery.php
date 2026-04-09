@@ -2,23 +2,29 @@
 
 namespace Nonsapiens\BigqueryModelSync\Traits;
 
+use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
+
 trait SyncsToBigQuery
 {
 
-    protected array $fieldsToSync = [];
+    public array $fieldsToSync = [];
 
-    protected bool $hasGeodata = false;
+    public bool $hasGeodata = false;
 
-    protected array $geodataFields = [
+    public array $geodataFields = [
         'latitude', 'longitude'
     ];
 
-    protected string $mappedGeographyField = 'geolocation';
+    public string $mappedGeographyField = 'geolocation';
 
-    protected bool $syncOnCreate = false;
+    public BigQuerySyncStrategy $syncStrategy = BigQuerySyncStrategy::BATCH;
 
-    protected string $batchField = 'sync_batch_uuid';
+    public string $batchField = 'sync_batch_uuid';
 
-    protected ?string $bigQueryTableName = null;
+    public ?string $bigQueryTableName = null;
+
+    public string $syncSchedule = '*/5 * * * *';
+
+    public int $batchSize = 10000;
 
 }

@@ -5,6 +5,7 @@ namespace Nonsapiens\BigqueryModelSync;
 use Illuminate\Support\ServiceProvider;
 use Nonsapiens\BigqueryModelSync\Commands\SetModelCommand;
 use Nonsapiens\BigqueryModelSync\Commands\MakeBigQueryTableCommand;
+use Nonsapiens\BigqueryModelSync\Commands\SyncModelsCommand;
 
 class BigqueryModelSyncServiceProvider extends ServiceProvider
 {
@@ -14,6 +15,7 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
             $this->commands([
                 SetModelCommand::class,
                 MakeBigQueryTableCommand::class,
+                SyncModelsCommand::class,
             ]);
 
             $this->publishes([
