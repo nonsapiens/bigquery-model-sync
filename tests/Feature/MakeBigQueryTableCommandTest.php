@@ -35,8 +35,6 @@ class MakeBigQueryTableCommandTest extends TestCase
     {
         $fqcn = NoTraitModel::class;
 
-        DB::shouldReceive('select')->andReturn($this->columnsForBasicTable())->once();
-
         $this->artisan('make:bigquery-table', ['--class' => $fqcn])
             ->expectsOutputToContain("Class {$fqcn} does not use the SyncsToBigQuery trait.")
             ->assertExitCode(1);
@@ -52,11 +50,12 @@ class MakeBigQueryTableCommandTest extends TestCase
 
         $this->artisan('make:bigquery-table', ['--class' => $fqcn])
             ->expectsChoice('Select a field to partition by (optional):', 'None', ['id', 'created_at', 'None'])
+            ->expectsChoice('Select up to 4 fields to cluster by (comma separated numbers, optional):', ['None'], ['None', 'id', 'name', 'created_at'])
             ->expectsQuestion('Do you want to proceed with this SQL generation?', true)
-            ->expectsOutputToContain('CREATE TABLE `bq_geo_table`')
-            ->expectsOutputToContain('`location` GEOGRAPHY')
-            ->doesntExpectOutputToContain('`latitude`')
-            ->doesntExpectOutputToContain('`longitude`')
+            ->expectsOutputToContain('CREATE TABLE bq_geo_table')
+            ->expectsOutputToContain('location GEOGRAPHY')
+            ->doesntExpectOutputToContain('latitude')
+            ->doesntExpectOutputToContain('longitude')
             ->assertExitCode(0);
     }
 
@@ -70,7 +69,7 @@ class MakeBigQueryTableCommandTest extends TestCase
 
         $this->artisan('make:bigquery-table', ['--class' => $fqcn])
             ->expectsChoice('Select a field to partition by (optional):', 'event_date', ['id', 'event_date', 'user_id', 'None'])
-            ->expectsChoice('Select up to 4 fields to cluster by (comma separated numbers, optional):', ['user_id', 'name'], ['id', 'event_date', 'user_id', 'name'])
+            ->expectsChoice('Select up to 4 fields to cluster by (comma separated numbers, optional):', ['user_id', 'name'], ['None', 'id', 'event_date', 'user_id', 'name'])
             ->expectsQuestion('Do you want to proceed with this SQL generation?', true)
             ->expectsOutputToContain('PARTITION BY DATE(event_date)')
             ->expectsOutputToContain('CLUSTER BY user_id, name')

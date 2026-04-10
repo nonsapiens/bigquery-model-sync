@@ -59,17 +59,17 @@ class MakeBigQueryTableCommand extends Command
             return self::FAILURE;
         }
 
-        /** @var Model $model */
+        /** @var Model|SyncsToBigQuery $model */
         $model = new $className();
         
         // 1. Determine BigQuery Table Name
-        $bigQueryTableName = $this->getPropertyValue($model, 'bigQueryTableName') ?: $model->getTable();
+        $bigQueryTableName = $model->bigQueryTableName() ?: $model->getTable();
 
         // 2. Determine fields to sync
-        $fieldsToSync = $this->getPropertyValue($model, 'fieldsToSync') ?: [];
-        $hasGeodata = (bool) $this->getPropertyValue($model, 'hasGeodata', false);
-        $geodataFields = $this->getPropertyValue($model, 'geodataFields') ?: ['latitude', 'longitude'];
-        $mappedGeographyField = $this->getPropertyValue($model, 'mappedGeographyField') ?: 'geolocation';
+        $fieldsToSync = $model->bigQueryFieldsToSync() ?: [];
+        $hasGeodata = (bool) $model->bigQueryHasGeodata();
+        $geodataFields = $model->bigQueryGeodataFields() ?: ['latitude', 'longitude'];
+        $mappedGeographyField = $model->bigQueryMappedGeographyField() ?: 'geolocation';
 
         // 3. Get database columns
         $columns = $this->getTableColumns($model->getTable());
@@ -133,13 +133,13 @@ class MakeBigQueryTableCommand extends Command
             $clusterChoices = array_map(fn($col) => $col['name'], $eligibleClusterFields);
             $selectedClusters = $this->choice(
                 'Select up to 4 fields to cluster by (comma separated numbers, optional):',
-                $clusterChoices,
-                null,
+                array_merge(['None'], $clusterChoices),
+                'None',
                 null,
                 true
             );
 
-            if (!empty($selectedClusters)) {
+            if (!empty($selectedClusters) && !in_array('None', $selectedClusters)) {
                 if (count($selectedClusters) > 4) {
                     $this->warn('BigQuery supports up to 4 clustering fields. Only the first 4 will be used.');
                     $selectedClusters = array_slice($selectedClusters, 0, 4);
@@ -151,9 +151,8 @@ class MakeBigQueryTableCommand extends Command
         // 6. Generate SQL
         $sql = $this->generateCreateSql($bigQueryTableName, $columns, $partitionField, $clusterFields);
 
-        $this->info("\nGenerated SQL:\n");
-        $this->line("<fg=yellow>{$sql}</>");
-        $this->info("");
+        $this->info("Generated SQL:");
+        $this->line($sql);
 
         if ($this->confirm('Do you want to proceed with this SQL generation?', true)) {
             $this->info("SQL generation approved.");

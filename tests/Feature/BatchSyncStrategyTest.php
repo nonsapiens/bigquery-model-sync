@@ -33,14 +33,14 @@ class BatchSyncStrategyTest extends TestCase
         });
 
         // Use the migration file for bigquery_syncs
-        $migration = include __DIR__ . '/../../src/Migrations/2026_04_03_000000_create_bigquery_syncs_table.php';
+        $migration = include __DIR__ . '/../../database/migrations/2026_04_03_000000_create_bigquery_syncs_table.php';
         $migration->up();
     }
 
     protected function getEnvironmentSetUp($app)
     {
-        $app['config']->set('bigquery.project_id', 'test-project');
-        $app['config']->set('bigquery.dataset_id', 'test_dataset');
+        $app['config']->set('bigquery.projectId', 'test-project');
+        $app['config']->set('bigquery.dataset', 'test_dataset');
         $app['config']->set('bigquery.key_file_path', 'test-key.json');
         $app['config']->set('database.default', 'testbench');
         $app['config']->set('database.connections.testbench', [
@@ -88,9 +88,10 @@ class BatchSyncStrategyTest extends TestCase
             $data2 = $rows[1]['data'];
             return count($rows) === 2 &&
                    $data1['name'] === 'Record 1' &&
-                   $data1['metadata'] === ['key' => 'value'] &&
+                   $data1['metadata'] === '{"key":"value"}' &&
                    $data2['name'] === 'Non-JSON string' &&
-                   $data2['metadata'] === 'Just a plain string';
+                   $data2['metadata'] === 'Just a plain string' &&
+                   isset($data1['geolocation']) && $data1['geolocation'] === 'POINT(151.2093 -33.8688)';
         })->andReturn($mockResponse);
 
         $mockResponse->shouldReceive('isSuccessful')->andReturn(true);

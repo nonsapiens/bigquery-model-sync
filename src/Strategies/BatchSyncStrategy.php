@@ -13,8 +13,8 @@ class BatchSyncStrategy extends SyncStrategy
 {
     public function sync(Model $model): void
     {
-        $batchField = $model->batchField ?? 'sync_batch_uuid';
-        $batchSize = $model->batchSize ?? 1000;
+        $batchField = $model->bigQueryBatchField();
+        $batchSize = $model->bigQueryBatchSize();
         $syncBatchUuid = Str::uuid()->toString();
 
         // 1. Claim the records to sync
@@ -41,7 +41,7 @@ class BatchSyncStrategy extends SyncStrategy
             ]);
 
             $datasetId = config('bigquery.dataset');
-            $tableName = $model->bigQueryTableName ?? $model->getTable();
+            $tableName = $model->bigQueryTableName() ?? $model->getTable();
             $table = $bigQuery->dataset($datasetId)->table($tableName);
 
             $totalSynced = 0;
@@ -56,8 +56,8 @@ class BatchSyncStrategy extends SyncStrategy
                         $data = [];
                         $recordArray = (array) $record;
 
-                        $fields = !empty($model->fieldsToSync)
-                            ? $model->fieldsToSync
+                        $fields = !empty($model->bigQueryFieldsToSync())
+                            ? $model->bigQueryFieldsToSync()
                             : array_diff(array_keys($recordArray), [$batchField]);
 
                         foreach ($fields as $field) {
@@ -72,12 +72,14 @@ class BatchSyncStrategy extends SyncStrategy
                             $data[$field] = $value;
                         }
 
-                        if ($model->hasGeodata && isset($model->mappedGeographyField)) {
-                            $lat = $recordArray[$model->geodataFields[0]] ?? null;
-                            $lon = $recordArray[$model->geodataFields[1]] ?? null;
+                        if ($model->bigQueryHasGeodata()) {
+                            $geodataFields = $model->bigQueryGeodataFields();
+                            $mappedGeographyField = $model->bigQueryMappedGeographyField();
+                            $lat = $recordArray[$geodataFields[0]] ?? null;
+                            $lon = $recordArray[$geodataFields[1]] ?? null;
 
                             if ($lat !== null && $lon !== null) {
-                                $data[$model->mappedGeographyField] = "POINT($lon $lat)";
+                                $data[$mappedGeographyField] = "POINT($lon $lat)";
                             }
                         }
 

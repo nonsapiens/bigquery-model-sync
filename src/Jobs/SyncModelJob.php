@@ -35,8 +35,10 @@ class SyncModelJob implements ShouldQueue
             return;
         }
 
+        /** @var \Nonsapiens\BigqueryModelSync\Traits\SyncsToBigQuery $model */
+
         // Select strategy
-        $strategy = $model->syncStrategy ?? BigQuerySyncStrategy::BATCH;
+        $strategy = $model->bigQuerySyncStrategy();
         if ($strategy !== BigQuerySyncStrategy::BATCH) {
             // Placeholder for other strategies
             return;

@@ -7,24 +7,52 @@ use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
 trait SyncsToBigQuery
 {
 
-    public array $fieldsToSync = [];
+    public function bigQueryFieldsToSync(): array
+    {
+        return $this->fieldsToSync ?? [];
+    }
 
-    public bool $hasGeodata = false;
+    public function bigQueryHasGeodata(): bool
+    {
+        return $this->hasGeodata ?? false;
+    }
 
-    public array $geodataFields = [
-        'latitude', 'longitude'
-    ];
+    public function bigQueryGeodataFields(): array
+    {
+        return $this->geodataFields ?? ['latitude', 'longitude'];
+    }
 
-    public string $mappedGeographyField = 'geolocation';
+    public function bigQueryMappedGeographyField(): string
+    {
+        return $this->mappedGeographyField ?? 'geolocation';
+    }
 
-    public BigQuerySyncStrategy $syncStrategy = BigQuerySyncStrategy::BATCH;
+    public function bigQuerySyncStrategy(): BigQuerySyncStrategy
+    {
+        return $this->syncStrategy ?? BigQuerySyncStrategy::BATCH;
+    }
 
-    public string $batchField = 'sync_batch_uuid';
+    public function bigQueryBatchField(): string
+    {
+        return $this->batchField ?? 'sync_batch_uuid';
+    }
 
-    public ?string $bigQueryTableName = null;
+    public function bigQueryTableName(): ?string
+    {
+        if (property_exists($this, 'bigQueryTableName')) {
+            return $this->bigQueryTableName;
+        }
+        return null;
+    }
 
-    public string $syncSchedule = '*/5 * * * *';
+    public function bigQuerySyncSchedule(): string
+    {
+        return $this->syncSchedule ?? '*/5 * * * *';
+    }
 
-    public int $batchSize = 10000;
+    public function bigQueryBatchSize(): int
+    {
+        return $this->batchSize ?? 10000;
+    }
 
 }

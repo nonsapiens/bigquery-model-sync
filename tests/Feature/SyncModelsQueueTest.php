@@ -24,14 +24,14 @@ class SyncModelsQueueTest extends TestCase
             $table->timestamps();
         });
 
-        $migration = include __DIR__ . '/../../src/Migrations/2026_04_03_000000_create_bigquery_syncs_table.php';
+        $migration = include __DIR__ . '/../../database/migrations/2026_04_03_000000_create_bigquery_syncs_table.php';
         $migration->up();
     }
 
     protected function getEnvironmentSetUp($app)
     {
-        $app['config']->set('bigquery.project_id', 'test-project');
-        $app['config']->set('bigquery.dataset_id', 'test_dataset');
+        $app['config']->set('bigquery.projectId', 'test-project');
+        $app['config']->set('bigquery.dataset', 'test_dataset');
         $app['config']->set('bigquery.key_file_path', 'test-key.json');
         $app['config']->set('database.default', 'testbench');
         $app['config']->set('database.connections.testbench', [

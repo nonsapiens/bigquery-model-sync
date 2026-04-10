@@ -32,6 +32,7 @@ class SyncModelsCommand extends Command
             return self::FAILURE;
         }
 
+        /** @var Model|SyncsToBigQuery $model */
         $model = new $fqcn();
 
         if (!$model instanceof Model) {
@@ -45,7 +46,7 @@ class SyncModelsCommand extends Command
         }
 
         // Evaluate cron schedule
-        $schedule = $this->option('schedule') ?: ($model->syncSchedule ?? '*/5 * * * *');
+        $schedule = $this->option('schedule') ?: $model->bigQuerySyncSchedule();
         $now = Carbon::now();
 
         try {
@@ -61,7 +62,7 @@ class SyncModelsCommand extends Command
         }
 
         // Select strategy
-        $strategy = $model->syncStrategy ?? BigQuerySyncStrategy::BATCH;
+        $strategy = $model->bigQuerySyncStrategy();
         if ($strategy !== BigQuerySyncStrategy::BATCH) {
             $this->warn("Strategy {$strategy->value} not implemented yet. Skipping.");
             return self::SUCCESS;
