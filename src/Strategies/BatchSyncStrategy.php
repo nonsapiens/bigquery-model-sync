@@ -60,9 +60,7 @@ class BatchSyncStrategy extends SyncStrategy
                             $value = $recordArray[$field] ?? null;
 
                             if (is_string($value)) {
-                                if ($this->isJson($value)) {
-                                    $value = json_decode($value, true);
-                                } elseif ($this->isDateTime($value)) {
+                                if ($this->isDateTime($value)) {
                                     $value = new \DateTime($value);
                                 }
                             }
@@ -107,22 +105,11 @@ class BatchSyncStrategy extends SyncStrategy
         } catch (\Exception $e) {
             $syncRecord->update([
                 'status' => 'failed',
-                'error_message' => $e->getMessage(),
+                'error_message' => Str::limit($e->getMessage(), 65000),
                 'completed_at' => now(),
             ]);
             throw $e;
         }
-    }
-
-    private function isJson($string): bool
-    {
-        if (!is_string($string)) {
-            return false;
-        }
-
-        json_decode($string);
-
-        return json_last_error() === JSON_ERROR_NONE;
     }
 
     private function isDateTime($string): bool
