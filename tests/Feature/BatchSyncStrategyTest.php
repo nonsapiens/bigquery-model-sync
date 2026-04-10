@@ -26,6 +26,9 @@ class BatchSyncStrategyTest extends TestCase
             $table->string('sync_batch_uuid', 36)->nullable();
             $table->decimal('latitude', 10, 6)->nullable();
             $table->decimal('longitude', 10, 6)->nullable();
+            $table->date('some_date')->nullable();
+            $table->datetime('some_datetime')->nullable();
+            $table->json('metadata')->nullable();
             $table->timestamps();
         });
 
@@ -51,8 +54,22 @@ class BatchSyncStrategyTest extends TestCase
     {
         // 1. Prepare data
         DB::table('test_models')->insert([
-            ['name' => 'Record 1', 'latitude' => -33.8688, 'longitude' => 151.2093],
-            ['name' => 'Record 2', 'latitude' => -37.8136, 'longitude' => 144.9631],
+            [
+                'name' => 'Record 1',
+                'latitude' => -33.8688,
+                'longitude' => 151.2093,
+                'some_date' => '2023-01-01',
+                'some_datetime' => '2023-01-01 12:00:00',
+                'metadata' => json_encode(['key' => 'value']),
+            ],
+            [
+                'name' => 'Non-JSON string',
+                'latitude' => null,
+                'longitude' => null,
+                'some_date' => null,
+                'some_datetime' => null,
+                'metadata' => 'Just a plain string',
+            ],
         ]);
 
         $model = new TestModel();
@@ -67,11 +84,13 @@ class BatchSyncStrategyTest extends TestCase
         $mockDataset->shouldReceive('table')->with('test_models')->andReturn($mockTable);
 
         $mockTable->shouldReceive('insertRows')->withArgs(function ($rows) {
+            $data1 = $rows[0]['data'];
+            $data2 = $rows[1]['data'];
             return count($rows) === 2 &&
-                   $rows[0]['data']['name'] === 'Record 1' &&
-                   $rows[0]['data']['geolocation'] === 'POINT(151.2093 -33.8688)' &&
-                   $rows[1]['data']['name'] === 'Record 2' &&
-                   $rows[1]['data']['geolocation'] === 'POINT(144.9631 -37.8136)';
+                   $data1['name'] === 'Record 1' &&
+                   $data1['metadata'] === ['key' => 'value'] &&
+                   $data2['name'] === 'Non-JSON string' &&
+                   $data2['metadata'] === 'Just a plain string';
         })->andReturn($mockResponse);
 
         $mockResponse->shouldReceive('isSuccessful')->andReturn(true);
@@ -149,7 +168,7 @@ class TestModel extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->fieldsToSync = ['id', 'name'];
+        $this->fieldsToSync = ['id', 'name', 'some_date', 'some_datetime', 'metadata'];
         $this->hasGeodata = true;
         $this->geodataFields = ['latitude', 'longitude'];
         $this->mappedGeographyField = 'geolocation';

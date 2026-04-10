@@ -58,7 +58,17 @@ class BatchSyncStrategy extends SyncStrategy
                         $recordArray = (array) $record;
 
                         foreach ($model->fieldsToSync as $field) {
-                            $data[$field] = $recordArray[$field] ?? null;
+                            $value = $recordArray[$field] ?? null;
+
+                            if (is_string($value)) {
+                                if ($this->isJson($value)) {
+                                    $value = json_decode($value, true);
+                                } elseif ($this->isDateTime($value)) {
+                                    $value = new \DateTime($value);
+                                }
+                            }
+
+                            $data[$field] = $value;
                         }
 
                         if ($model->hasGeodata && isset($model->mappedGeographyField)) {
@@ -102,6 +112,36 @@ class BatchSyncStrategy extends SyncStrategy
                 'completed_at' => now(),
             ]);
             throw $e;
+        }
+    }
+
+    private function isJson($string): bool
+    {
+        if (!is_string($string)) {
+            return false;
+        }
+
+        json_decode($string);
+
+        return json_last_error() === JSON_ERROR_NONE;
+    }
+
+    private function isDateTime($string): bool
+    {
+        if (!is_string($string)) {
+            return false;
+        }
+
+        // Check for common SQL date formats
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}(?:\s\d{2}:\d{2}:\d{2})?$/', $string)) {
+            return false;
+        }
+
+        try {
+            new \DateTime($string);
+            return true;
+        } catch (\Exception $e) {
+            return false;
         }
     }
 }
