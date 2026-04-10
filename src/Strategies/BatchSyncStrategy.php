@@ -50,13 +50,17 @@ class BatchSyncStrategy extends SyncStrategy
             DB::table($model->getTable())
                 ->where($batchField, $syncBatchUuid)
                 ->orderBy($model->getKeyName())
-                ->chunk($batchSize, function ($records) use ($table, $model, &$totalSynced) {
+                ->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced) {
                     $rows = [];
                     foreach ($records as $record) {
                         $data = [];
                         $recordArray = (array) $record;
 
-                        foreach ($model->fieldsToSync as $field) {
+                        $fields = !empty($model->fieldsToSync)
+                            ? $model->fieldsToSync
+                            : array_diff(array_keys($recordArray), [$batchField]);
+
+                        foreach ($fields as $field) {
                             $value = $recordArray[$field] ?? null;
 
                             if (is_string($value)) {
@@ -77,7 +81,13 @@ class BatchSyncStrategy extends SyncStrategy
                             }
                         }
 
-                        $rows[] = ['data' => $data];
+                        if (!empty($data)) {
+                            $rows[] = ['data' => $data];
+                        }
+                    }
+
+                    if (empty($rows)) {
+                        return;
                     }
 
                     $response = $table->insertRows($rows);
