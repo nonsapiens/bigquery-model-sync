@@ -37,11 +37,10 @@ class BatchSyncStrategy extends SyncStrategy
 
         try {
             $bigQuery = new BigQueryClient([
-                'projectId' => config('bigquery.project_id'),
-                'keyFilePath' => config('bigquery.key_file_path'),
+                'projectId' => config('bigquery.projectId'),
             ]);
 
-            $datasetId = config('bigquery.dataset_id');
+            $datasetId = config('bigquery.dataset');
             $tableName = $model->bigQueryTableName ?? $model->getTable();
             $table = $bigQuery->dataset($datasetId)->table($tableName);
 
