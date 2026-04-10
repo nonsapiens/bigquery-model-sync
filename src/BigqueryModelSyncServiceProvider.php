@@ -12,6 +12,8 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
         if ($this->app->runningInConsole()) {
             $this->commands([
                 SetModelCommand::class,
@@ -21,7 +23,7 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
             ]);
 
             $this->publishes([
-                __DIR__ . '../database/migrations/' => database_path('migrations'),
+                __DIR__ . '/../database/migrations/' => database_path('migrations'),
             ], 'bigquery-model-sync-migrations');
         }
     }
