@@ -10,6 +10,11 @@ use Nonsapiens\BigqueryModelSync\Commands\MakeBigQueryModelMigrationCommand;
 
 class BigqueryModelSyncServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->mergeConfigFrom(__DIR__ . '/../config/bigquery.php', 'bigquery');
+    }
+
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
@@ -25,6 +30,10 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/../database/migrations/' => database_path('migrations'),
             ], 'bigquery-model-sync-migrations');
+
+            $this->publishes([
+                __DIR__ . '/../config/bigquery.php' => config_path('bigquery.php'),
+            ], 'bigquery-model-sync-config');
         }
     }
 }
