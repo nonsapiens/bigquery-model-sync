@@ -14,9 +14,9 @@ use ReflectionClass;
 
 class SyncModelsCommand extends Command
 {
-    protected $signature = 'bigquery:sync {--class=} {--schedule=} {--queue}';
+    protected $signature = 'bigquery:sync {--class=} {--schedule=} {--queue} {--force}';
 
-    protected $description = 'Run BigQuery sync for a model if its $syncSchedule is due (BATCH strategy supported).';
+    protected $description = 'Run BigQuery sync for a model if its $syncSchedule is due (BATCH strategy supported). Use --force to sync even if not scheduled.';
 
     public function handle(): int
     {
@@ -55,7 +55,7 @@ class SyncModelsCommand extends Command
             return self::FAILURE;
         }
 
-        if (!$cron->isDue($now)) {
+        if (!$this->option('force') && !$cron->isDue($now)) {
             $this->info("Schedule not due for {$fqcn} at {$now->toDateTimeString()} ({$schedule}). Skipping.");
             return self::SUCCESS;
         }
