@@ -35,12 +35,23 @@ abstract class SyncStrategy
             ? $model->bigQueryFieldsToSync()
             : array_diff(array_keys($recordArray), (array) $batchField);
 
+        $casts = $model->getCasts();
+
         foreach ($fields as $field) {
             $value = $recordArray[$field] ?? null;
 
-            if (is_string($value)) {
-                if ($this->isDateTime($value)) {
-                    $value = new \DateTime($value);
+            if ($value !== null) {
+                $castType = $casts[$field] ?? null;
+                if ($castType === 'boolean' || $castType === 'bool') {
+                    $value = (bool) $value;
+                } elseif ($castType === 'array' || $castType === 'json' || $castType === 'object') {
+                    if (is_string($value)) {
+                        $value = json_decode($value, true);
+                    }
+                } elseif (is_string($value)) {
+                    if ($this->isDateTime($value)) {
+                        $value = new \DateTime($value);
+                    }
                 }
             }
 
