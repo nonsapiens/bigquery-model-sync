@@ -83,8 +83,7 @@ class ReplaceSyncStrategyTest extends TestCase
         $mockResponse->shouldReceive('isSuccessful')->andReturn(true);
 
         // 3. Execute Sync
-        $strategy = new ReplaceSyncStrategy();
-        $strategy->sync($model);
+        $model->sync();
 
         // 4. Assertions
         $this->assertDatabaseHas('bigquery_syncs', [

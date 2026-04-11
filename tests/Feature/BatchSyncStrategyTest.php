@@ -97,8 +97,7 @@ class BatchSyncStrategyTest extends TestCase
         $mockResponse->shouldReceive('isSuccessful')->andReturn(true);
 
         // 3. Execute Sync
-        $strategy = new BatchSyncStrategy();
-        $strategy->sync($model);
+        $model->sync();
 
         // 4. Assertions
         $this->assertEquals(2, DB::table('test_models')->whereNotNull('sync_batch_uuid')->count());
@@ -142,10 +141,8 @@ class BatchSyncStrategyTest extends TestCase
         ]);
 
         // 3. Execute Sync and expect Exception
-        $strategy = new BatchSyncStrategy();
-
         try {
-            $strategy->sync($model);
+            $model->sync();
             $this->fail('Expected exception was not thrown');
         } catch (\Exception $e) {
             $this->assertStringContainsString('BigQuery Insert Failed', $e->getMessage());

@@ -2,7 +2,13 @@
 
 namespace Nonsapiens\BigqueryModelSync\Traits;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
+use Nonsapiens\BigqueryModelSync\Models\BigQuerySync;
+use Nonsapiens\BigqueryModelSync\Strategies\BatchSyncStrategy;
+use Nonsapiens\BigqueryModelSync\Strategies\OnInsertSyncStrategy;
+use Nonsapiens\BigqueryModelSync\Strategies\ReplaceSyncStrategy;
 
 trait SyncsToBigQuery
 {
@@ -72,4 +78,65 @@ trait SyncsToBigQuery
         return $this->batchSize ?? 10000;
     }
 
+    /**
+     * Sync the model's data to BigQuery.
+     *
+     * @return BigQuerySync|null
+     */
+    public function sync(): ?BigQuerySync
+    {
+        $strategyType = $this->bigQuerySyncStrategy();
+        $syncStrategy = match ($strategyType) {
+            BigQuerySyncStrategy::BATCH => new BatchSyncStrategy(),
+            BigQuerySyncStrategy::REPLACE => new ReplaceSyncStrategy(),
+            BigQuerySyncStrategy::ON_INSERT => new OnInsertSyncStrategy(),
+            default => null,
+        };
+
+        if (!$syncStrategy) {
+            return null;
+        }
+
+        $syncBatchUuid = Str::uuid()->toString();
+
+        $syncRecord = BigQuerySync::create([
+            'model' => get_class($this),
+            'sync_batch_uuid' => $syncBatchUuid,
+            'sync_type' => $strategyType->value,
+            'status' => 'in_progress',
+            'started_at' => now(),
+        ]);
+
+        try {
+            $recordsSynced = $syncStrategy->execute($this, $syncRecord);
+
+            $syncRecord->update([
+                'status' => 'completed',
+                'records_synced' => $recordsSynced,
+                'completed_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            $syncRecord->update([
+                'status' => 'failed',
+                'error_message' => Str::limit($e->getMessage(), 65000),
+                'completed_at' => now(),
+            ]);
+            throw $e;
+        }
+
+        return $syncRecord;
+    }
+
+    /**
+     * Boot the trait to listen for model events.
+     */
+    public static function bootSyncsToBigQuery(): void
+    {
+        static::created(function (Model $model) {
+            /** @var SyncsToBigQuery $model */
+            if ($model->bigQuerySyncStrategy() === BigQuerySyncStrategy::ON_INSERT) {
+                \Nonsapiens\BigqueryModelSync\Jobs\SyncRecordJob::dispatch($model);
+            }
+        });
+    }
 }

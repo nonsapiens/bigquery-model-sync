@@ -4,6 +4,7 @@ namespace Nonsapiens\BigqueryModelSync\Strategies;
 
 use Google\Cloud\BigQuery\Table;
 use Illuminate\Database\Eloquent\Model;
+use Nonsapiens\BigqueryModelSync\Models\BigQuerySync;
 
 abstract class SyncStrategy
 {
@@ -11,8 +12,11 @@ abstract class SyncStrategy
      * Execute the sync for the given model.
      *
      * @param Model $model Instance of a model using SyncsToBigQuery trait
+     * @param BigQuerySync $syncRecord
+     * @return int Number of records synced
      */
-    abstract public function sync(Model $model): void;
+    abstract public function execute(Model $model, BigQuerySync $syncRecord): int;
+
 
     /**
      * Prepare a single record for BigQuery insertion.

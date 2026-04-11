@@ -8,36 +8,24 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Database\Eloquent\Model;
-use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
-use Nonsapiens\BigqueryModelSync\Strategies\BatchSyncStrategy;
-use Nonsapiens\BigqueryModelSync\Strategies\ReplaceSyncStrategy;
 use Nonsapiens\BigqueryModelSync\Strategies\OnInsertSyncStrategy;
 
-class SyncModelJob implements ShouldQueue
+class SyncRecordJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(protected string $modelClass)
+    public function __construct(public Model $model)
     {
     }
 
     public function getModelClass(): string
     {
-        return $this->modelClass;
+        return get_class($this->model);
     }
 
     public function handle(): void
     {
-        if (!class_exists($this->modelClass)) {
-            return;
-        }
-
-        $model = new $this->modelClass();
-        if (!$model instanceof Model) {
-            return;
-        }
-
         /** @var \Nonsapiens\BigqueryModelSync\Traits\SyncsToBigQuery $model */
-        $model->sync();
+        $this->model->sync();
     }
 }
