@@ -2,6 +2,7 @@
 
 namespace Nonsapiens\BigqueryModelSync\Traits;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
@@ -76,6 +77,11 @@ trait SyncsToBigQuery
     public function bigQueryBatchSize(): int
     {
         return $this->batchSize ?? 10000;
+    }
+
+    public function filterForBigQuerySync(Builder $query): void
+    {
+        // To be overridden by model class if needed
     }
 
     /**

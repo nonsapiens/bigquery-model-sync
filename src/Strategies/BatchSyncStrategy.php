@@ -15,9 +15,12 @@ class BatchSyncStrategy extends SyncStrategy
         $syncBatchUuid = $syncRecord->sync_batch_uuid;
 
         // 1. Claim the records to sync
-        $affected = DB::table($model->getTable())
-            ->whereNull($batchField)
-            ->update([$batchField => $syncBatchUuid]);
+        $query = $model->newQuery()
+            ->whereNull($batchField);
+
+        $model->filterForBigQuerySync($query);
+
+        $affected = $query->update([$batchField => $syncBatchUuid]);
 
         if ($affected === 0) {
             return 0;
