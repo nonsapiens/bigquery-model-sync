@@ -37,7 +37,8 @@ class ReplaceSyncStrategy extends SyncStrategy
             // 2. Truncate BigQuery table
             // We use a query to delete all rows. Another option is $table->delete() then re-create, 
             // but DELETE is safer if we don't want to manage schema here.
-            $bigQuery->runQuery("DELETE FROM `{$datasetId}.{$tableName}` WHERE 1=1");
+            $queryConfig = $bigQuery->query("DELETE FROM `{$datasetId}.{$tableName}` WHERE 1=1");
+            $bigQuery->runQuery($queryConfig);
 
             $totalSynced = 0;
 

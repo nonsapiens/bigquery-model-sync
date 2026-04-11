@@ -107,7 +107,9 @@ class SyncModelsCommandTest extends TestCase
         $mockBigQuery->shouldReceive('dataset')->with('test_dataset')->andReturn($mockDataset);
         $mockDataset->shouldReceive('table')->with('cmd_replace_models')->andReturn($mockTable);
         
-        $mockBigQuery->shouldReceive('runQuery')->once();
+        $mockQueryConfig = Mockery::mock(\Google\Cloud\BigQuery\QueryJobConfiguration::class);
+        $mockBigQuery->shouldReceive('query')->once()->andReturn($mockQueryConfig);
+        $mockBigQuery->shouldReceive('runQuery')->with($mockQueryConfig)->once();
         $mockTable->shouldReceive('insertRows')->andReturn($mockResponse);
         $mockResponse->shouldReceive('isSuccessful')->andReturn(true);
 

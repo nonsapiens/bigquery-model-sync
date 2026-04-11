@@ -63,8 +63,14 @@ class ReplaceSyncStrategyTest extends TestCase
         $mockDataset->shouldReceive('table')->with('test_replace_models')->andReturn($mockTable);
 
         // Expect truncation
-        $mockBigQuery->shouldReceive('runQuery')
+        $mockQueryConfig = Mockery::mock(\Google\Cloud\BigQuery\QueryJobConfiguration::class);
+        $mockBigQuery->shouldReceive('query')
             ->with("DELETE FROM `test_dataset.test_replace_models` WHERE 1=1")
+            ->once()
+            ->andReturn($mockQueryConfig);
+
+        $mockBigQuery->shouldReceive('runQuery')
+            ->with($mockQueryConfig)
             ->once();
 
         // Expect insert
