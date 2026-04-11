@@ -86,7 +86,7 @@ class SyncModelsCommand extends Command
 
         $this->info("Running {$strategyName} sync for {$fqcn}...");
         try {
-            $syncStrategy->sync($model);
+            $model->sync();
             $this->info('Sync completed.');
             return self::SUCCESS;
         } catch (\Throwable $e) {
