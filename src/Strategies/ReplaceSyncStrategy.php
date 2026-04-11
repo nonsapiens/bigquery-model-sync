@@ -9,28 +9,18 @@ use Illuminate\Support\Str;
 use Nonsapiens\BigqueryModelSync\Models\BigQuerySync;
 use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
 
-class BatchSyncStrategy extends SyncStrategy
+class ReplaceSyncStrategy extends SyncStrategy
 {
     public function sync(Model $model): void
     {
-        $batchField = $model->bigQueryBatchField();
         $batchSize = $model->bigQueryBatchSize();
         $syncBatchUuid = Str::uuid()->toString();
 
-        // 1. Claim the records to sync
-        $affected = DB::table($model->getTable())
-            ->whereNull($batchField)
-            ->update([$batchField => $syncBatchUuid]);
-
-        if ($affected === 0) {
-            return;
-        }
-
-        // 2. Create sync record
+        // 1. Create sync record
         $syncRecord = BigQuerySync::create([
             'model' => get_class($model),
             'sync_batch_uuid' => $syncBatchUuid,
-            'sync_type' => BigQuerySyncStrategy::BATCH->value,
+            'sync_type' => BigQuerySyncStrategy::REPLACE->value,
             'status' => 'in_progress',
             'started_at' => now(),
         ]);
@@ -44,16 +34,20 @@ class BatchSyncStrategy extends SyncStrategy
             $tableName = $model->bigQueryTableName() ?? $model->getTable();
             $table = $bigQuery->dataset($datasetId)->table($tableName);
 
+            // 2. Truncate BigQuery table
+            // We use a query to delete all rows. Another option is $table->delete() then re-create, 
+            // but DELETE is safer if we don't want to manage schema here.
+            $bigQuery->runQuery("DELETE FROM `{$datasetId}.{$tableName}` WHERE 1=1");
+
             $totalSynced = 0;
 
-            // 3. Select those records with the UUID and bulk insert into BigQuery in batches
+            // 3. Select all records and bulk insert into BigQuery in batches
             DB::table($model->getTable())
-                ->where($batchField, $syncBatchUuid)
                 ->orderBy($model->getKeyName())
-                ->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced) {
+                ->chunk($batchSize, function ($records) use ($table, $model, &$totalSynced) {
                     $rows = [];
                     foreach ($records as $record) {
-                        $data = $this->prepareRow($record, $model, $batchField);
+                        $data = $this->prepareRow($record, $model);
 
                         if (!empty($data)) {
                             $rows[] = ['data' => $data];

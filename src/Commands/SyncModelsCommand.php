@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
 use Nonsapiens\BigqueryModelSync\Jobs\SyncModelJob;
 use Nonsapiens\BigqueryModelSync\Strategies\BatchSyncStrategy;
+use Nonsapiens\BigqueryModelSync\Strategies\ReplaceSyncStrategy;
 use Nonsapiens\BigqueryModelSync\Traits\SyncsToBigQuery;
 use Cron\CronExpression;
 use Carbon\Carbon;
@@ -16,7 +17,7 @@ class SyncModelsCommand extends Command
 {
     protected $signature = 'bigquery:sync {--class=} {--schedule=} {--queue} {--force}';
 
-    protected $description = 'Run BigQuery sync for a model if its $syncSchedule is due (BATCH strategy supported). Use --force to sync even if not scheduled.';
+    protected $description = 'Run BigQuery sync for a model if its $syncSchedule is due (BATCH and REPLACE strategies supported). Use --force to sync even if not scheduled.';
 
     public function handle(): int
     {
@@ -63,20 +64,29 @@ class SyncModelsCommand extends Command
 
         // Select strategy
         $strategy = $model->bigQuerySyncStrategy();
-        if ($strategy !== BigQuerySyncStrategy::BATCH) {
+        
+        $syncStrategy = match ($strategy) {
+            BigQuerySyncStrategy::BATCH => new BatchSyncStrategy(),
+            BigQuerySyncStrategy::REPLACE => new ReplaceSyncStrategy(),
+            default => null,
+        };
+
+        if (!$syncStrategy) {
             $this->warn("Strategy {$strategy->value} not implemented yet. Skipping.");
             return self::SUCCESS;
         }
 
+        $strategyName = strtoupper($strategy->value);
+
         if ($this->option('queue')) {
-            $this->info("Dispatching BATCH sync for {$fqcn} to queue...");
+            $this->info("Dispatching {$strategyName} sync for {$fqcn} to queue...");
             SyncModelJob::dispatch($fqcn);
             return self::SUCCESS;
         }
 
-        $this->info("Running BATCH sync for {$fqcn}...");
+        $this->info("Running {$strategyName} sync for {$fqcn}...");
         try {
-            (new BatchSyncStrategy())->sync($model);
+            $syncStrategy->sync($model);
             $this->info('Sync completed.');
             return self::SUCCESS;
         } catch (\Throwable $e) {

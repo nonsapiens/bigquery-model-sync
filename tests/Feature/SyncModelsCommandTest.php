@@ -8,6 +8,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
+use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
 use Nonsapiens\BigqueryModelSync\Tests\TestCase;
 use Nonsapiens\BigqueryModelSync\Traits\SyncsToBigQuery;
 
@@ -82,6 +83,55 @@ class SyncModelsCommandTest extends TestCase
             ->assertExitCode(0);
 
         Carbon::setTestNow();
+    }
+
+    public function test_runs_replace_sync_when_strategy_is_replace()
+    {
+        Schema::create('cmd_replace_models', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        DB::table('cmd_replace_models')->insert([
+            ['name' => 'Replacement'],
+        ]);
+
+        Carbon::setTestNow(Carbon::create(2026, 4, 9, 1, 0, 0));
+
+        $mockBigQuery = Mockery::mock('overload:Google\\Cloud\\BigQuery\\BigQueryClient');
+        $mockDataset = Mockery::mock('Google\\Cloud\\BigQuery\\Dataset');
+        $mockTable = Mockery::mock('Google\\Cloud\\BigQuery\\Table');
+        $mockResponse = Mockery::mock('Google\\Cloud\\BigQuery\\InsertResponse');
+
+        $mockBigQuery->shouldReceive('dataset')->with('test_dataset')->andReturn($mockDataset);
+        $mockDataset->shouldReceive('table')->with('cmd_replace_models')->andReturn($mockTable);
+        
+        $mockBigQuery->shouldReceive('runQuery')->once();
+        $mockTable->shouldReceive('insertRows')->andReturn($mockResponse);
+        $mockResponse->shouldReceive('isSuccessful')->andReturn(true);
+
+        $this->artisan('bigquery:sync', ['--class' => CmdReplaceModel::class])
+            ->expectsOutputToContain('Running REPLACE sync')
+            ->expectsOutputToContain('Sync completed')
+            ->assertExitCode(0);
+
+        Carbon::setTestNow();
+    }
+}
+
+class CmdReplaceModel extends Model
+{
+    use SyncsToBigQuery;
+
+    protected $table = 'cmd_replace_models';
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+        $this->syncStrategy = BigQuerySyncStrategy::REPLACE;
+        $this->fieldsToSync = ['id', 'name'];
+        $this->syncSchedule = '* * * * *';
     }
 }
 

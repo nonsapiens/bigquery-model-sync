@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Database\Eloquent\Model;
 use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
 use Nonsapiens\BigqueryModelSync\Strategies\BatchSyncStrategy;
+use Nonsapiens\BigqueryModelSync\Strategies\ReplaceSyncStrategy;
 
 class SyncModelJob implements ShouldQueue
 {
@@ -39,11 +40,15 @@ class SyncModelJob implements ShouldQueue
 
         // Select strategy
         $strategy = $model->bigQuerySyncStrategy();
-        if ($strategy !== BigQuerySyncStrategy::BATCH) {
-            // Placeholder for other strategies
-            return;
-        }
+        
+        $syncStrategy = match ($strategy) {
+            BigQuerySyncStrategy::BATCH => new BatchSyncStrategy(),
+            BigQuerySyncStrategy::REPLACE => new ReplaceSyncStrategy(),
+            default => null,
+        };
 
-        (new BatchSyncStrategy())->sync($model);
+        if ($syncStrategy) {
+            $syncStrategy->sync($model);
+        }
     }
 }
