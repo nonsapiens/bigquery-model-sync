@@ -45,8 +45,8 @@ abstract class SyncStrategy
                 if ($castType === 'boolean' || $castType === 'bool') {
                     $value = (bool) $value;
                 } elseif ($castType === 'array' || $castType === 'json' || $castType === 'object') {
-                    if (is_string($value)) {
-                        $value = json_decode($value, true);
+                    if (!is_string($value)) {
+                        $value = json_encode($value);
                     }
                 } elseif (is_string($value)) {
                     if ($this->isDateTime($value)) {
