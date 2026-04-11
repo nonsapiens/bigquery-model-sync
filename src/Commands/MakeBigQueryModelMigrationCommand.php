@@ -34,10 +34,17 @@ class MakeBigQueryModelMigrationCommand extends Command
             return self::FAILURE;
         }
 
-        /** @var Model $instance */
+        /** @var Model|SyncsToBigQuery $instance */
         $instance = new $modelClass();
         $table = $instance->getTable();
-        $batchField = property_exists($instance, 'batchField') ? $instance->batchField : 'sync_batch_uuid';
+        $batchField = $instance->bigQueryBatchField();
+
+        if ($instance->bigQuerySyncStrategy() === \Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy::REPLACE) {
+            $this->warn("Model '{$modelClass}' uses the REPLACE strategy, which does not require a batch field.");
+            if (!$this->confirm("Do you still want to create the migration for '{$batchField}'?", false)) {
+                return self::SUCCESS;
+            }
+        }
 
         $this->createMigration($table, $batchField);
 

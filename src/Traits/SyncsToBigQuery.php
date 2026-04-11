@@ -103,7 +103,7 @@ trait SyncsToBigQuery
             return null;
         }
 
-        $syncBatchUuid = Str::uuid()->toString();
+        $syncBatchUuid = $strategyType === BigQuerySyncStrategy::REPLACE ? null : Str::uuid()->toString();
 
         $syncRecord = BigQuerySync::create([
             'model' => get_class($this),

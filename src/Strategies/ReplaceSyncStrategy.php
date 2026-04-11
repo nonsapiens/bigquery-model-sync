@@ -10,6 +10,7 @@ class ReplaceSyncStrategy extends SyncStrategy
 {
     public function execute(Model $model, \Nonsapiens\BigqueryModelSync\Models\BigQuerySync $syncRecord): int
     {
+        $batchField = $model->bigQueryBatchField();
         $batchSize = $model->bigQueryBatchSize();
 
         $bigQuery = new BigQueryClient([
@@ -31,10 +32,10 @@ class ReplaceSyncStrategy extends SyncStrategy
         // 2. Select all records and bulk insert into BigQuery in batches
         DB::table($model->getTable())
             ->orderBy($model->getKeyName())
-            ->chunk($batchSize, function ($records) use ($table, $model, &$totalSynced) {
+            ->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced) {
                 $rows = [];
                 foreach ($records as $record) {
-                    $data = $this->prepareRow($record, $model);
+                    $data = $this->prepareRow($record, $model, $batchField);
 
                     if (!empty($data)) {
                         $rows[] = ['data' => $data];

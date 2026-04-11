@@ -85,6 +85,14 @@ class MakeBigQueryTableCommand extends Command
             });
         }
 
+        // Exclude batch field if strategy is REPLACE
+        if ($model->bigQuerySyncStrategy() === \Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy::REPLACE) {
+            $batchField = $model->bigQueryBatchField();
+            $columns = array_filter($columns, function ($col) use ($batchField) {
+                return $col['name'] !== $batchField;
+            });
+        }
+
         // Handle Geodata
         if ($hasGeodata) {
             // Exclude geodata fields
