@@ -20,57 +20,57 @@ class SyncAllModelsCommand extends Command
 
     public function handle(): int
     {
-        Log::info('Starting bigquery:sync-all command');
+        $this->logInfo('Starting bigquery:sync-all command');
         $models = $this->discoverModelsWithSchedule();
 
         if (empty($models)) {
             $this->info('No models with $syncSchedule found.');
-            Log::info('No models with $syncSchedule found.');
+            $this->logInfo('No models with $syncSchedule found.');
             return self::SUCCESS;
         }
 
-        Log::info('Discovered models for sync: ' . implode(', ', $models));
+        $this->logInfo('Discovered models for sync: ' . implode(', ', $models));
 
         $now = Carbon::now();
         $modelsToSync = [];
 
         foreach ($models as $fqcn) {
-            Log::info("Checking schedule for {$fqcn}");
+            $this->logInfo("Checking schedule for {$fqcn}");
             /** @var Model|SyncsToBigQuery $model */
             $model = new $fqcn();
             $schedule = $model->bigQuerySyncSchedule();
 
             if (!$schedule) {
-                Log::info("No schedule found for {$fqcn}, skipping.");
+                $this->logInfo("No schedule found for {$fqcn}, skipping.");
                 continue;
             }
 
             try {
                 $cron = CronExpression::factory($schedule);
                 if ($cron->isDue($now)) {
-                    Log::info("Model {$fqcn} is due for sync (schedule: {$schedule})");
+                    $this->logInfo("Model {$fqcn} is due for sync (schedule: {$schedule})");
                     $modelsToSync[] = $fqcn;
                 } else {
-                    Log::info("Model {$fqcn} is not due for sync (schedule: {$schedule})");
+                    $this->logInfo("Model {$fqcn} is not due for sync (schedule: {$schedule})");
                 }
             } catch (\Throwable $e) {
                 $this->error("Invalid cron expression for {$fqcn}: {$schedule}");
-                Log::error("Invalid cron expression for {$fqcn}: {$schedule}");
+                $this->logError("Invalid cron expression for {$fqcn}: {$schedule}");
             }
         }
 
         if (empty($modelsToSync)) {
             $this->info('No models due for sync at this time.');
-            Log::info('No models due for sync at this time.');
+            $this->logInfo('No models due for sync at this time.');
             return self::SUCCESS;
         }
 
         $this->info('Syncing models: ' . implode(', ', $modelsToSync));
-        Log::info('Syncing models: ' . implode(', ', $modelsToSync));
+        $this->logInfo('Syncing models: ' . implode(', ', $modelsToSync));
 
         $results = [];
         foreach ($modelsToSync as $fqcn) {
-            Log::info("Starting sync for {$fqcn}");
+            $this->logInfo("Starting sync for {$fqcn}");
             $command = "php artisan bigquery:sync --class=\"{$fqcn}\" --force";
             $results[$fqcn] = Process::path(base_path())->run($command);
         }
@@ -79,7 +79,7 @@ class SyncAllModelsCommand extends Command
         foreach ($results as $fqcn => $result) {
             if ($result->failed()) {
                 $this->error("Failed to sync {$fqcn}: " . $result->errorOutput());
-                Log::error("Failed to sync {$fqcn} during bigquery:sync-all", [
+                $this->logError("Failed to sync {$fqcn} during bigquery:sync-all", [
                     'exit_code' => $result->exitCode(),
                     'output' => $result->output(),
                     'error' => $result->errorOutput(),
@@ -87,13 +87,33 @@ class SyncAllModelsCommand extends Command
                 $exitCode = self::FAILURE;
             } else {
                 $this->info("Successfully synced {$fqcn}.");
-                Log::info("Successfully synced {$fqcn}.");
+                $this->logInfo("Successfully synced {$fqcn}.");
             }
         }
 
-        Log::info('Finished bigquery:sync-all command');
+        $this->logInfo('Finished bigquery:sync-all command');
 
         return (int) $exitCode;
+    }
+
+    /**
+     * Log info if logging is enabled in config.
+     */
+    protected function logInfo(string $message, array $context = []): void
+    {
+        if (config('bigquery.logging', true)) {
+            Log::info($message, $context);
+        }
+    }
+
+    /**
+     * Log error if logging is enabled in config.
+     */
+    protected function logError(string $message, array $context = []): void
+    {
+        if (config('bigquery.logging', true)) {
+            Log::error($message, $context);
+        }
     }
 
     /**
