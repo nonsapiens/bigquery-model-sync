@@ -65,6 +65,8 @@ class SyncAllModelsCommandTest extends TestCase
                     && $context['exit_code'] === 1
                     && trim($context['error']) === 'Error occurred';
             });
+        
+        Log::shouldReceive('info')->atLeast()->once();
 
         $this->artisan('bigquery:sync-all')
             ->expectsOutputToContain('Failed to sync Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel1: Error occurred')

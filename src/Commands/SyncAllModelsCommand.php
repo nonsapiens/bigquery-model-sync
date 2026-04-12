@@ -20,29 +20,38 @@ class SyncAllModelsCommand extends Command
 
     public function handle(): int
     {
+        Log::info('Starting bigquery:sync-all command');
         $models = $this->discoverModelsWithSchedule();
 
         if (empty($models)) {
             $this->info('No models with $syncSchedule found.');
+            Log::info('No models with $syncSchedule found.');
             return self::SUCCESS;
         }
+
+        Log::info('Discovered models for sync: ' . implode(', ', $models));
 
         $now = Carbon::now();
         $modelsToSync = [];
 
         foreach ($models as $fqcn) {
+            Log::info("Checking schedule for {$fqcn}");
             /** @var Model|SyncsToBigQuery $model */
             $model = new $fqcn();
             $schedule = $model->bigQuerySyncSchedule();
 
             if (!$schedule) {
+                Log::info("No schedule found for {$fqcn}, skipping.");
                 continue;
             }
 
             try {
                 $cron = CronExpression::factory($schedule);
                 if ($cron->isDue($now)) {
+                    Log::info("Model {$fqcn} is due for sync (schedule: {$schedule})");
                     $modelsToSync[] = $fqcn;
+                } else {
+                    Log::info("Model {$fqcn} is not due for sync (schedule: {$schedule})");
                 }
             } catch (\Throwable $e) {
                 $this->error("Invalid cron expression for {$fqcn}: {$schedule}");
@@ -52,13 +61,16 @@ class SyncAllModelsCommand extends Command
 
         if (empty($modelsToSync)) {
             $this->info('No models due for sync at this time.');
+            Log::info('No models due for sync at this time.');
             return self::SUCCESS;
         }
 
         $this->info('Syncing models: ' . implode(', ', $modelsToSync));
+        Log::info('Syncing models: ' . implode(', ', $modelsToSync));
 
         $results = [];
         foreach ($modelsToSync as $fqcn) {
+            Log::info("Starting sync for {$fqcn}");
             $command = "php artisan bigquery:sync --class=\"{$fqcn}\" --force";
             $results[$fqcn] = Process::path(base_path())->run($command);
         }
@@ -75,8 +87,11 @@ class SyncAllModelsCommand extends Command
                 $exitCode = self::FAILURE;
             } else {
                 $this->info("Successfully synced {$fqcn}.");
+                Log::info("Successfully synced {$fqcn}.");
             }
         }
+
+        Log::info('Finished bigquery:sync-all command');
 
         return (int) $exitCode;
     }
