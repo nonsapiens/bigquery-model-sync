@@ -3,6 +3,7 @@
 namespace Nonsapiens\BigqueryModelSync;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Console\Scheduling\Schedule;
 use Nonsapiens\BigqueryModelSync\Commands\SetModelCommand;
 use Nonsapiens\BigqueryModelSync\Commands\MakeBigQueryTableCommand;
 use Nonsapiens\BigqueryModelSync\Commands\SyncModelsCommand;
@@ -36,6 +37,13 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/../config/bigquery.php' => config_path('bigquery.php'),
             ], 'bigquery-model-sync-config');
+
+            $this->app->booted(function () {
+                $schedule = $this->app->make(Schedule::class);
+                if (config('bigquery.autosync')) {
+                    $schedule->command(SyncAllModelsCommand::class)->everyMinute();
+                }
+            });
         }
     }
 }
