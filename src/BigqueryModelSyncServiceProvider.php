@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Nonsapiens\BigqueryModelSync\Commands\SetModelCommand;
 use Nonsapiens\BigqueryModelSync\Commands\MakeBigQueryTableCommand;
 use Nonsapiens\BigqueryModelSync\Commands\SyncModelsCommand;
+use Nonsapiens\BigqueryModelSync\Commands\SyncAllModelsCommand;
 use Nonsapiens\BigqueryModelSync\Commands\MakeBigQueryModelMigrationCommand;
 
 class BigqueryModelSyncServiceProvider extends ServiceProvider
@@ -24,6 +25,7 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
                 SetModelCommand::class,
                 MakeBigQueryTableCommand::class,
                 SyncModelsCommand::class,
+                SyncAllModelsCommand::class,
                 MakeBigQueryModelMigrationCommand::class,
             ]);
 
