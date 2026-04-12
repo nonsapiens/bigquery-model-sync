@@ -107,6 +107,11 @@ trait SyncsToBigQuery
         try {
             $recordsSynced = $syncStrategy->execute($this, $syncRecord);
 
+            if ($recordsSynced === 0) {
+                $syncRecord->delete();
+                return null;
+            }
+
             $syncRecord->update([
                 'status' => 'completed',
                 'records_synced' => $recordsSynced,
