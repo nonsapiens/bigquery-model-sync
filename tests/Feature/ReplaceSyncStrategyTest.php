@@ -48,8 +48,8 @@ class ReplaceSyncStrategyTest extends TestCase
     {
         // 1. Prepare data
         DB::table('test_replace_models')->insert([
-            ['name' => 'Record 1'],
-            ['name' => 'Record 2'],
+            ['name' => 'Record 1', 'created_at' => '2023-01-01 10:00:00'],
+            ['name' => 'Record 2', 'created_at' => '2023-01-01 11:00:00'],
         ]);
 
         $model = new TestReplaceModel();
@@ -66,8 +66,9 @@ class ReplaceSyncStrategyTest extends TestCase
         // Expect load job (truncate + data)
         $mockJobConfig = Mockery::mock(\Google\Cloud\BigQuery\LoadJobConfiguration::class);
         $mockTable->shouldReceive('load')->withArgs(function ($data, $options) {
-            return str_contains($data, 'Record 1') &&
-                   str_contains($data, 'Record 2') &&
+            // Check that created_at is a string and not a JSON object
+            return str_contains($data, '"created_at":"2023-01-01 10:00:00"') &&
+                   str_contains($data, '"created_at":"2023-01-01 11:00:00"') &&
                    $options['configuration']['load']['writeDisposition'] === 'WRITE_TRUNCATE';
         })->once()->andReturn($mockJobConfig);
 
@@ -100,6 +101,6 @@ class TestReplaceModel extends Model
     {
         parent::__construct($attributes);
         $this->syncStrategy = BigQuerySyncStrategy::REPLACE;
-        $this->fieldsToSync = ['id', 'name'];
+        $this->fieldsToSync = ['id', 'name', 'created_at'];
     }
 }

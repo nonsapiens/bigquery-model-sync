@@ -55,7 +55,7 @@ abstract class SyncStrategy
                     }
                 } elseif (is_string($value)) {
                     if ($this->isDateTime($value)) {
-                        $value = new \DateTime($value);
+                        $value = (new \DateTime($value))->format('Y-m-d H:i:s');
                     }
                 } elseif ($value instanceof \DateTimeInterface) {
                     $value = $value->format('Y-m-d H:i:s');
