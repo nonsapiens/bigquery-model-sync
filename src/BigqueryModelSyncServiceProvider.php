@@ -32,6 +32,7 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
             return new BigQueryClient([
                 'projectId' => config('bigquery.projectId'),
                 'credentialsFetcher' => $credentials,
+                'location' => config('bigquery.location'),
             ]);
         });
     }

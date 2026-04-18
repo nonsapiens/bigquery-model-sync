@@ -3,6 +3,7 @@
 return [
     'projectId' => env('GOOGLE_CLOUD_PROJECT'),
     'dataset' => env('BIGQUERY_DATASET'),
+    'location' => env('BIGQUERY_LOCATION', 'africa-south1'),
 
     /**
      * A list of namespaces to check for traited classes.
