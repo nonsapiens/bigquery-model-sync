@@ -43,9 +43,12 @@ class TruncateBigQueryTableCommandTest extends TestCase
         $mockBigQuery->shouldReceive('dataset')->with('test_dataset')->andReturn($mockDataset);
         $mockDataset->shouldReceive('table')->with('test_table_1')->andReturn($mockTable);
 
+        $mockJobConfig = Mockery::mock(\Google\Cloud\BigQuery\LoadJobConfiguration::class);
         $mockTable->shouldReceive('load')->once()->with('', Mockery::on(function ($options) {
             return $options['configuration']['load']['writeDisposition'] === 'WRITE_TRUNCATE';
-        }))->andReturn($mockJob);
+        }))->andReturn($mockJobConfig);
+
+        $mockBigQuery->shouldReceive('startJob')->with($mockJobConfig)->once()->andReturn($mockJob);
 
         $mockJob->shouldReceive('reload')->atLeast()->once();
         $mockJob->shouldReceive('isComplete')->andReturn(true);

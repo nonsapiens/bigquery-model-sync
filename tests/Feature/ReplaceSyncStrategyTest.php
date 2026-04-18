@@ -64,11 +64,14 @@ class ReplaceSyncStrategyTest extends TestCase
         $mockDataset->shouldReceive('table')->with('test_replace_models')->andReturn($mockTable);
 
         // Expect load job (truncate + data)
+        $mockJobConfig = Mockery::mock(\Google\Cloud\BigQuery\LoadJobConfiguration::class);
         $mockTable->shouldReceive('load')->withArgs(function ($data, $options) {
             return str_contains($data, 'Record 1') &&
                    str_contains($data, 'Record 2') &&
                    $options['configuration']['load']['writeDisposition'] === 'WRITE_TRUNCATE';
-        })->once()->andReturn($mockJob);
+        })->once()->andReturn($mockJobConfig);
+
+        $mockBigQuery->shouldReceive('startJob')->with($mockJobConfig)->once()->andReturn($mockJob);
 
         $mockJob->shouldReceive('reload')->atLeast()->once();
         $mockJob->shouldReceive('isComplete')->andReturn(true);

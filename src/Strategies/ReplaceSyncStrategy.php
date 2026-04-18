@@ -77,7 +77,8 @@ class ReplaceSyncStrategy extends SyncStrategy
             return;
         }
 
-        $job = $table->load($data, $options);
+        $jobConfig = $table->load($data, $options);
+        $job = $this->bigQuery->startJob($jobConfig);
 
         // Wait for the job to complete
         $backoff = new \Google\Cloud\Core\ExponentialBackoff(10);

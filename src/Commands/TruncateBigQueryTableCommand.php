@@ -64,7 +64,8 @@ class TruncateBigQueryTableCommand extends Command
                     ],
                 ];
 
-                $job = $table->load('', $options);
+                $jobConfig = $table->load('', $options);
+                $job = $bigQuery->startJob($jobConfig);
 
                 // Wait for the job to complete
                 $backoff = new \Google\Cloud\Core\ExponentialBackoff(10);
