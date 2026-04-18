@@ -16,13 +16,9 @@ class OnInsertSyncStrategy extends SyncStrategy
      */
     public function execute(Model $model, \Nonsapiens\BigqueryModelSync\Models\BigQuerySync $syncRecord): int
     {
-        $bigQuery = new BigQueryClient([
-            'projectId' => config('bigquery.projectId'),
-        ]);
-
         $datasetId = config('bigquery.dataset');
         $tableName = $model->bigQueryTableName() ?? $model->getTable();
-        $table = $bigQuery->dataset($datasetId)->table($tableName);
+        $table = $this->bigQuery->dataset($datasetId)->table($tableName);
 
         // 1. Prepare the single record for BigQuery insertion
         $data = $this->prepareRow($model, $model);

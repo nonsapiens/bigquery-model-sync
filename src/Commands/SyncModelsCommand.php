@@ -66,8 +66,8 @@ class SyncModelsCommand extends Command
         $strategy = $model->bigQuerySyncStrategy();
         
         $syncStrategy = match ($strategy) {
-            BigQuerySyncStrategy::BATCH => new BatchSyncStrategy(),
-            BigQuerySyncStrategy::REPLACE => new ReplaceSyncStrategy(),
+            BigQuerySyncStrategy::BATCH => app(BatchSyncStrategy::class),
+            BigQuerySyncStrategy::REPLACE => app(ReplaceSyncStrategy::class),
             default => null,
         };
 

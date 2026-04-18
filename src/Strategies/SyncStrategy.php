@@ -2,12 +2,17 @@
 
 namespace Nonsapiens\BigqueryModelSync\Strategies;
 
+use Google\Cloud\BigQuery\BigQueryClient;
 use Google\Cloud\BigQuery\Table;
 use Illuminate\Database\Eloquent\Model;
 use Nonsapiens\BigqueryModelSync\Models\BigQuerySync;
 
 abstract class SyncStrategy
 {
+    public function __construct(protected BigQueryClient $bigQuery)
+    {
+    }
+
     /**
      * Execute the sync for the given model.
      *

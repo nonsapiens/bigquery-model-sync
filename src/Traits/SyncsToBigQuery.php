@@ -84,9 +84,9 @@ trait SyncsToBigQuery
     {
         $strategyType = $this->bigQuerySyncStrategy();
         $syncStrategy = match ($strategyType) {
-            BigQuerySyncStrategy::BATCH => new BatchSyncStrategy(),
-            BigQuerySyncStrategy::REPLACE => new ReplaceSyncStrategy(),
-            BigQuerySyncStrategy::ON_INSERT => new OnInsertSyncStrategy(),
+            BigQuerySyncStrategy::BATCH => app(BatchSyncStrategy::class),
+            BigQuerySyncStrategy::REPLACE => app(ReplaceSyncStrategy::class),
+            BigQuerySyncStrategy::ON_INSERT => app(OnInsertSyncStrategy::class),
             default => null,
         };
 

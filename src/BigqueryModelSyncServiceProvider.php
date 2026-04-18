@@ -2,6 +2,8 @@
 
 namespace Nonsapiens\BigqueryModelSync;
 
+use Google\Auth\Credentials\ExternalAccountCredentials;
+use Google\Cloud\BigQuery\BigQueryClient;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Nonsapiens\BigqueryModelSync\Commands\SetModelCommand;
@@ -18,8 +20,18 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../config/bigquery.php', 'bigquery');
 
         $this->app->singleton(\Google\Cloud\BigQuery\BigQueryClient::class, function ($app) {
-            return new \Google\Cloud\BigQuery\BigQueryClient([
+            $credentialPath = config('bigquery.credentials');
+
+            $json = json_decode(file_get_contents($credentialPath), true);
+
+            $credentials = new ExternalAccountCredentials(
+                ['https://www.googleapis.com/auth/cloud-platform'],
+                $json
+            );
+
+            return new BigQueryClient([
                 'projectId' => config('bigquery.projectId'),
+                'credentialsFetcher' => $credentials,
             ]);
         });
     }
