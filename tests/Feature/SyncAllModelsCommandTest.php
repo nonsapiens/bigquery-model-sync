@@ -99,6 +99,36 @@ class SyncAllModelsCommandTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_sync_all_runs_all_models_when_force_is_used()
+    {
+        Carbon::setTestNow(Carbon::create(2026, 4, 12, 10, 0, 0));
+
+        Config::set('bigquery.models', [
+            SyncAllTestModel1::class,
+            SyncAllTestModel2::class,
+            SyncAllTestModelNotDue::class,
+        ]);
+
+        Process::fake([
+            'php artisan bigquery:sync --class="Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel1" --force' => Process::result('Success 1', '', 0),
+            'php artisan bigquery:sync --class="Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel2" --force' => Process::result('Success 2', '', 0),
+            'php artisan bigquery:sync --class="Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModelNotDue" --force' => Process::result('Success 3', '', 0),
+        ]);
+
+        $this->artisan('bigquery:sync-all --force')
+            ->expectsOutputToContain('Syncing models: Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel1, Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel2, Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModelNotDue')
+            ->expectsOutputToContain('Successfully synced Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel1.')
+            ->expectsOutputToContain('Successfully synced Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel2.')
+            ->expectsOutputToContain('Successfully synced Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModelNotDue.')
+            ->assertExitCode(0);
+
+        Process::assertRan('php artisan bigquery:sync --class="Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel1" --force');
+        Process::assertRan('php artisan bigquery:sync --class="Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModel2" --force');
+        Process::assertRan('php artisan bigquery:sync --class="Nonsapiens\BigqueryModelSync\Tests\Feature\SyncAllTestModelNotDue" --force');
+
+        Carbon::setTestNow();
+    }
 }
 
 class SyncAllTestModel1 extends Model

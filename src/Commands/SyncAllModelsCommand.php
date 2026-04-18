@@ -14,9 +14,9 @@ use Symfony\Component\Finder\Finder;
 
 class SyncAllModelsCommand extends Command
 {
-    protected $signature = 'bigquery:sync-all';
+    protected $signature = 'bigquery:sync-all {--force}';
 
-    protected $description = 'Analyse all SyncsToBigQuery traited classes and run due syncs in parallel.';
+    protected $description = 'Analyse all SyncsToBigQuery traited classes and run due syncs in parallel. Use --force to run all syncs regardless of schedule.';
 
     public function handle(): int
     {
@@ -46,6 +46,12 @@ class SyncAllModelsCommand extends Command
             }
 
             try {
+                if ($this->option('force')) {
+                    $this->logInfo("Model {$fqcn} is being forced to sync");
+                    $modelsToSync[] = $fqcn;
+                    continue;
+                }
+
                 $cron = CronExpression::factory($schedule);
                 if ($cron->isDue($now)) {
                     $this->logInfo("Model {$fqcn} is due for sync (schedule: {$schedule})");
