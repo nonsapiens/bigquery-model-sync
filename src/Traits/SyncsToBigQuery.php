@@ -5,6 +5,7 @@ namespace Nonsapiens\BigqueryModelSync\Traits;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use Nonsapiens\BigqueryModelSync\Enums\BigQuerySyncStrategy;
 use Nonsapiens\BigqueryModelSync\Models\BigQuerySync;
 use Nonsapiens\BigqueryModelSync\Strategies\BatchSyncStrategy;
@@ -96,6 +97,8 @@ trait SyncsToBigQuery
 
         $syncBatchUuid = $strategyType === BigQuerySyncStrategy::REPLACE ? null : Str::uuid()->toString();
 
+        Log::info(sprintf('BigQuery sync started for %s (Strategy: %s)', get_class($this), $strategyType->value));
+
         $syncRecord = BigQuerySync::create([
             'model' => get_class($this),
             'sync_batch_uuid' => $syncBatchUuid,
@@ -108,6 +111,7 @@ trait SyncsToBigQuery
             $recordsSynced = $syncStrategy->execute($this, $syncRecord);
 
             if ($recordsSynced === 0) {
+                Log::info(sprintf('BigQuery sync for %s skipped - no records to sync', get_class($this)));
                 $syncRecord->delete();
                 return null;
             }
@@ -117,12 +121,16 @@ trait SyncsToBigQuery
                 'records_synced' => $recordsSynced,
                 'completed_at' => now(),
             ]);
+
+            Log::info(sprintf('BigQuery sync completed for %s: %d records synced', get_class($this), $recordsSynced));
         } catch (\Exception $e) {
             $syncRecord->update([
                 'status' => 'failed',
                 'error_message' => Str::limit($e->getMessage(), 65000),
                 'completed_at' => now(),
             ]);
+
+            Log::error(sprintf('BigQuery sync failed for %s: %s', get_class($this), $e->getMessage()));
             throw $e;
         }
 
