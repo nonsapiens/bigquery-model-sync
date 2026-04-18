@@ -8,6 +8,7 @@ use Nonsapiens\BigqueryModelSync\Commands\SetModelCommand;
 use Nonsapiens\BigqueryModelSync\Commands\MakeBigQueryTableCommand;
 use Nonsapiens\BigqueryModelSync\Commands\SyncModelsCommand;
 use Nonsapiens\BigqueryModelSync\Commands\SyncAllModelsCommand;
+use Nonsapiens\BigqueryModelSync\Commands\TruncateBigQueryTableCommand;
 use Nonsapiens\BigqueryModelSync\Commands\MakeBigQueryModelMigrationCommand;
 
 class BigqueryModelSyncServiceProvider extends ServiceProvider
@@ -15,6 +16,12 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/bigquery.php', 'bigquery');
+
+        $this->app->singleton(\Google\Cloud\BigQuery\BigQueryClient::class, function ($app) {
+            return new \Google\Cloud\BigQuery\BigQueryClient([
+                'projectId' => config('bigquery.projectId'),
+            ]);
+        });
     }
 
     public function boot(): void
@@ -27,6 +34,7 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
                 MakeBigQueryTableCommand::class,
                 SyncModelsCommand::class,
                 SyncAllModelsCommand::class,
+                TruncateBigQueryTableCommand::class,
                 MakeBigQueryModelMigrationCommand::class,
             ]);
 
