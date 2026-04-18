@@ -54,7 +54,7 @@ class TruncateBigQueryTableCommand extends Command
             $tableName = $modelInstance->bigQueryTableName() ?? $modelInstance->getTable();
 
             $this->components->task("Truncating {$tableName}", function () use ($bigQuery, $datasetId, $tableName, $projectName) {
-                $queryConfig = $bigQuery->query("TRUNCATE TABLE `{$projectName}.{$datasetId}.{$tableName}`");
+                $queryConfig = $bigQuery->query("DELETE FROM `{$projectName}.{$datasetId}.{$tableName}` WHERE 1=1");
                 $bigQuery->runQuery($queryConfig);
                 return true;
             });
