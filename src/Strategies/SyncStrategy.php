@@ -57,6 +57,8 @@ abstract class SyncStrategy
                     if ($this->isDateTime($value)) {
                         $value = new \DateTime($value);
                     }
+                } elseif ($value instanceof \DateTimeInterface) {
+                    $value = $value->format('Y-m-d H:i:s');
                 }
             }
 
@@ -96,10 +98,15 @@ abstract class SyncStrategy
             $errors = [];
             foreach ($response->failedRows() as $row) {
                 foreach ($row['errors'] as $error) {
-                    $errors[] = $error['reason'] . ': ' . $error['message'];
+                    $errors[] = sprintf(
+                        'Reason: %s, Message: %s, Row Data: %s',
+                        $error['reason'],
+                        $error['message'],
+                        json_encode($row['data'])
+                    );
                 }
             }
-            throw new \Exception('BigQuery Insert Failed: ' . implode(', ', array_unique($errors)));
+            throw new \Exception('BigQuery Insert Failed: ' . implode(' | ', array_unique($errors)));
         }
     }
 
