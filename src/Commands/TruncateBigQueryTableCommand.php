@@ -45,6 +45,7 @@ class TruncateBigQueryTableCommand extends Command
             return self::FAILURE;
         }
 
+        $projectName = config('bigquery.projectId');
         $datasetId = config('bigquery.dataset');
 
         foreach ($models as $fqcn) {
@@ -52,8 +53,8 @@ class TruncateBigQueryTableCommand extends Command
             $modelInstance = new $fqcn();
             $tableName = $modelInstance->bigQueryTableName() ?? $modelInstance->getTable();
 
-            $this->components->task("Truncating {$tableName}", function () use ($bigQuery, $datasetId, $tableName) {
-                $queryConfig = $bigQuery->query("TRUNCATE TABLE `{$datasetId}.{$tableName}`");
+            $this->components->task("Truncating {$tableName}", function () use ($bigQuery, $datasetId, $tableName, $projectName) {
+                $queryConfig = $bigQuery->query("TRUNCATE TABLE `{$projectName}`.{$datasetId}.{$tableName}`");
                 $bigQuery->runQuery($queryConfig);
                 return true;
             });
