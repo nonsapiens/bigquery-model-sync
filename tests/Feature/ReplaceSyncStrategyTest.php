@@ -33,6 +33,7 @@ class ReplaceSyncStrategyTest extends TestCase
 
     protected function getEnvironmentSetUp($app)
     {
+        parent::getEnvironmentSetUp($app);
         $app['config']->set('bigquery.projectId', 'test-project');
         $app['config']->set('bigquery.dataset', 'test_dataset');
         $app['config']->set('database.default', 'testbench');
@@ -57,30 +58,21 @@ class ReplaceSyncStrategyTest extends TestCase
         $mockBigQuery = Mockery::mock('overload:' . BigQueryClient::class);
         $mockDataset = Mockery::mock(Dataset::class);
         $mockTable = Mockery::mock(Table::class);
-        $mockResponse = Mockery::mock(InsertResponse::class);
+        $mockJob = Mockery::mock(\Google\Cloud\BigQuery\Job::class);
 
         $mockBigQuery->shouldReceive('dataset')->with('test_dataset')->andReturn($mockDataset);
         $mockDataset->shouldReceive('table')->with('test_replace_models')->andReturn($mockTable);
 
-        // Expect truncation
-        $mockQueryConfig = Mockery::mock(\Google\Cloud\BigQuery\QueryJobConfiguration::class);
-        $mockBigQuery->shouldReceive('query')
-            ->with("DELETE FROM `test_dataset.test_replace_models` WHERE 1=1")
-            ->once()
-            ->andReturn($mockQueryConfig);
+        // Expect load job (truncate + data)
+        $mockTable->shouldReceive('load')->withArgs(function ($data, $options) {
+            return str_contains($data, 'Record 1') &&
+                   str_contains($data, 'Record 2') &&
+                   $options['configuration']['load']['writeDisposition'] === 'WRITE_TRUNCATE';
+        })->once()->andReturn($mockJob);
 
-        $mockBigQuery->shouldReceive('runQuery')
-            ->with($mockQueryConfig)
-            ->once();
-
-        // Expect insert
-        $mockTable->shouldReceive('insertRows')->withArgs(function ($rows) {
-            return count($rows) === 2 &&
-                   $rows[0]['data']['name'] === 'Record 1' &&
-                   $rows[1]['data']['name'] === 'Record 2';
-        })->andReturn($mockResponse);
-
-        $mockResponse->shouldReceive('isSuccessful')->andReturn(true);
+        $mockJob->shouldReceive('reload')->atLeast()->once();
+        $mockJob->shouldReceive('isComplete')->andReturn(true);
+        $mockJob->shouldReceive('info')->andReturn(['status' => ['state' => 'DONE']]);
 
         // 3. Execute Sync
         $model->sync();

@@ -17,32 +17,92 @@ class ReplaceSyncStrategy extends SyncStrategy
         $tableName = $model->bigQueryTableName() ?? $model->getTable();
         $table = $this->bigQuery->dataset($datasetId)->table($tableName);
 
-        // 1. Truncate BigQuery table
-        // We use a query to delete all rows. Another option is $table->delete() then re-create, 
-        // but DELETE is safer if we don't want to manage schema here.
-        $queryConfig = $this->bigQuery->query("DELETE FROM `{$datasetId}.{$tableName}` WHERE 1=1");
-        $this->bigQuery->runQuery($queryConfig);
-
         $totalSynced = 0;
+        $isFirstBatch = true;
 
-        // 2. Select all records and bulk insert into BigQuery in batches
+        // Select all records and bulk insert into BigQuery in batches
         DB::table($model->getTable())
             ->orderBy($model->getKeyName())
-            ->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced) {
+            ->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced, &$isFirstBatch) {
                 $rows = [];
                 foreach ($records as $record) {
                     $data = $this->prepareRow($record, $model, $batchField);
 
                     if (!empty($data)) {
-                        $rows[] = ['data' => $data];
+                        $rows[] = $data;
                     }
                 }
 
-                $this->insertRows($table, $rows);
-
-                $totalSynced += count($rows);
+                if (!empty($rows)) {
+                    $this->loadRows($table, $rows, $isFirstBatch);
+                    $totalSynced += count($rows);
+                    $isFirstBatch = false;
+                }
             });
 
+        // If no records were found, we still want to truncate the table
+        if ($isFirstBatch) {
+            $this->loadRows($table, [], true);
+        }
+
         return $totalSynced;
+    }
+
+    /**
+     * Load rows into BigQuery using a load job.
+     *
+     * @param \Google\Cloud\BigQuery\Table $table
+     * @param array $rows
+     * @param bool $truncate
+     * @throws \Exception
+     */
+    protected function loadRows(\Google\Cloud\BigQuery\Table $table, array $rows, bool $truncate = false): void
+    {
+        $data = '';
+        foreach ($rows as $row) {
+            $data .= json_encode($row) . "\n";
+        }
+
+        $options = [
+            'configuration' => [
+                'load' => [
+                    'sourceFormat' => 'NEWLINE_DELIMITED_JSON',
+                    'writeDisposition' => $truncate ? 'WRITE_TRUNCATE' : 'WRITE_APPEND',
+                ],
+            ],
+        ];
+
+        // If no rows, we only truncate if $truncate is true
+        if (empty($rows) && !$truncate) {
+            return;
+        }
+
+        $job = $table->load($data, $options);
+
+        // Wait for the job to complete
+        $backoff = new \Google\Cloud\Core\ExponentialBackoff(10);
+        $backoff->execute(function () use ($job) {
+            $job->reload();
+            if (!$job->isComplete()) {
+                throw new \Exception('Job not yet complete');
+            }
+        });
+
+        if (!$job->isComplete()) {
+            throw new \Exception('BigQuery load job timed out.');
+        }
+
+        $stats = $job->info();
+        if (isset($stats['status']['errorResult'])) {
+            $errors = [];
+            if (isset($stats['status']['errors'])) {
+                foreach ($stats['status']['errors'] as $error) {
+                    $errors[] = sprintf('Reason: %s, Message: %s', $error['reason'], $error['message']);
+                }
+            } else {
+                $errors[] = sprintf('Reason: %s, Message: %s', $stats['status']['errorResult']['reason'], $stats['status']['errorResult']['message']);
+            }
+            throw new \Exception('BigQuery Load Job Failed: ' . implode(' | ', array_unique($errors)));
+        }
     }
 }

@@ -39,6 +39,7 @@ class BatchSyncStrategyTest extends TestCase
 
     protected function getEnvironmentSetUp($app)
     {
+        parent::getEnvironmentSetUp($app);
         $app['config']->set('bigquery.projectId', 'test-project');
         $app['config']->set('bigquery.dataset', 'test_dataset');
         $app['config']->set('bigquery.key_file_path', 'test-key.json');
@@ -152,7 +153,7 @@ class BatchSyncStrategyTest extends TestCase
         $this->assertDatabaseHas('bigquery_syncs', [
             'model' => TestModel::class,
             'status' => 'failed',
-            'error_message' => 'BigQuery Insert Failed: invalid: Something went wrong',
+            'error_message' => 'BigQuery Insert Failed: Reason: invalid, Message: Something went wrong, Row Data: N/A',
         ]);
     }
 }

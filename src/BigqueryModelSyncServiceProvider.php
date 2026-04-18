@@ -22,6 +22,12 @@ class BigqueryModelSyncServiceProvider extends ServiceProvider
         $this->app->singleton(\Google\Cloud\BigQuery\BigQueryClient::class, function ($app) {
             $credentialPath = config('bigquery.credentials');
 
+            if (empty($credentialPath) || !file_exists($credentialPath)) {
+                return new BigQueryClient([
+                    'projectId' => config('bigquery.projectId'),
+                ]);
+            }
+
             $json = json_decode(file_get_contents($credentialPath), true);
 
             $credentials = new ExternalAccountCredentials(

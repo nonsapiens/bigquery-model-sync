@@ -31,7 +31,7 @@ class TruncateBigQueryTableCommand extends Command
         }
 
         if (!$this->confirm('Are you sure you want to truncate these tables?', false)) {
-            $this->warn(' ❌ Truncate cancelled.');
+            $this->warn('Truncate cancelled.');
             return self::SUCCESS;
         }
 
@@ -53,9 +53,38 @@ class TruncateBigQueryTableCommand extends Command
             $modelInstance = new $fqcn();
             $tableName = $modelInstance->bigQueryTableName() ?? $modelInstance->getTable();
 
-            $this->components->task("Truncating {$tableName}", function () use ($bigQuery, $datasetId, $tableName, $projectName) {
-                $queryConfig = $bigQuery->query("DELETE FROM `{$projectName}.{$datasetId}.{$tableName}` WHERE 1=1");
-                $bigQuery->runQuery($queryConfig);
+            $this->components->task("Truncating {$tableName}", function () use ($bigQuery, $datasetId, $tableName) {
+                $table = $bigQuery->dataset($datasetId)->table($tableName);
+                $options = [
+                    'configuration' => [
+                        'load' => [
+                            'sourceFormat' => 'NEWLINE_DELIMITED_JSON',
+                            'writeDisposition' => 'WRITE_TRUNCATE',
+                        ],
+                    ],
+                ];
+
+                $job = $table->load('', $options);
+
+                // Wait for the job to complete
+                $backoff = new \Google\Cloud\Core\ExponentialBackoff(10);
+                $backoff->execute(function () use ($job) {
+                    $job->reload();
+                    if (!$job->isComplete()) {
+                        throw new \Exception('Job not yet complete');
+                    }
+                });
+
+                if (!$job->isComplete()) {
+                    throw new \Exception('BigQuery load job timed out.');
+                }
+
+                $stats = $job->info();
+                if (isset($stats['status']['errorResult'])) {
+                    $message = $stats['status']['errorResult']['message'] ?? 'Unknown error';
+                    throw new \Exception("BigQuery Truncate Failed: {$message}");
+                }
+
                 return true;
             });
         }

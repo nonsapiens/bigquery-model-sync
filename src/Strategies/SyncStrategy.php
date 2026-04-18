@@ -102,7 +102,7 @@ abstract class SyncStrategy
                         'Reason: %s, Message: %s, Row Data: %s',
                         $error['reason'],
                         $error['message'],
-                        json_encode($row['data'])
+                        isset($row['data']) ? json_encode($row['data']) : 'N/A'
                     );
                 }
             }

@@ -13,6 +13,7 @@ class TruncateBigQueryTableCommandTest extends TestCase
 {
     protected function getEnvironmentSetUp($app)
     {
+        parent::getEnvironmentSetUp($app);
         $app['config']->set('bigquery.projectId', 'test-project');
         $app['config']->set('bigquery.dataset', 'test_dataset');
     }
@@ -35,16 +36,20 @@ class TruncateBigQueryTableCommandTest extends TestCase
         $mockBigQuery = Mockery::mock(BigQueryClient::class);
         $this->app->instance(BigQueryClient::class, $mockBigQuery);
 
-        $mockQueryConfig = Mockery::mock(\Google\Cloud\BigQuery\JobConfigurationInterface::class);
+        $mockDataset = Mockery::mock(\Google\Cloud\BigQuery\Dataset::class);
+        $mockTable = Mockery::mock(\Google\Cloud\BigQuery\Table::class);
+        $mockJob = Mockery::mock(\Google\Cloud\BigQuery\Job::class);
 
-        $mockBigQuery->shouldReceive('query')
-            ->once()
-            ->with("DELETE FROM `test_dataset.test_table_1` WHERE 1=1")
-            ->andReturn($mockQueryConfig);
+        $mockBigQuery->shouldReceive('dataset')->with('test_dataset')->andReturn($mockDataset);
+        $mockDataset->shouldReceive('table')->with('test_table_1')->andReturn($mockTable);
 
-        $mockBigQuery->shouldReceive('runQuery')
-            ->once()
-            ->with($mockQueryConfig);
+        $mockTable->shouldReceive('load')->once()->with('', Mockery::on(function ($options) {
+            return $options['configuration']['load']['writeDisposition'] === 'WRITE_TRUNCATE';
+        }))->andReturn($mockJob);
+
+        $mockJob->shouldReceive('reload')->atLeast()->once();
+        $mockJob->shouldReceive('isComplete')->andReturn(true);
+        $mockJob->shouldReceive('info')->andReturn(['status' => ['state' => 'DONE']]);
         
         $this->artisan('bigquery:truncate', ['--class' => TruncateTestModel1::class])
             ->expectsOutput('The following models will have their BigQuery tables truncated:')
