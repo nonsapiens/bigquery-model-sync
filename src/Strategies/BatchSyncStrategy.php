@@ -5,7 +5,11 @@ namespace Nonsapiens\BigqueryModelSync\Strategies;
 use Google\Cloud\BigQuery\BigQueryClient;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Nonsapiens\BigqueryModelSync\Traits\SyncsToBigQuery;
 
+/**
+ * @mixin SyncsToBigQuery
+ */
 class BatchSyncStrategy extends SyncStrategy
 {
     public function execute(Model $model, \Nonsapiens\BigqueryModelSync\Models\BigQuerySync $syncRecord): int
@@ -38,19 +42,18 @@ class BatchSyncStrategy extends SyncStrategy
 
         // Mitigation for tables without 'id' field
         $orderBy = $model->getKeyName() ?: $batchField;
-        if ($model->getKeyName() && $model->incrementing === false && $model->getKeyType() === 'string' && $model->getKeyName() === 'id') {
-            // This is a common case for pivot models that haven't been fully configured
-            // We check if the 'id' column actually exists to be safe
-            $columnExists = false;
-            try {
-                $columnExists = \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), $model->getKeyName());
-            } catch (\Exception $e) {
-                // If we can't check, assume it doesn't and fallback to batchField
-            }
-            if (!$columnExists) {
-                $orderBy = $batchField;
-            }
+        
+        $columnExists = false;
+        try {
+            $columnExists = \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), $orderBy);
+        } catch (\Exception $e) {
+            // If we can't check, assume it doesn't and fallback to batchField
         }
+
+        if (!$columnExists) {
+            $orderBy = $batchField;
+        }
+
         $query->orderBy($orderBy);
 
         $query->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced) {

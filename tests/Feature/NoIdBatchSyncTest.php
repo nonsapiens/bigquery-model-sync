@@ -99,8 +99,8 @@ class NoIdModel extends Model
     use SyncsToBigQuery;
 
     protected $table = 'no_id_models';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing = true;
+    protected $keyType = 'int';
     protected $primaryKey = 'id';
     public $timestamps = false;
 
