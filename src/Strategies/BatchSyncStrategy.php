@@ -32,10 +32,27 @@ class BatchSyncStrategy extends SyncStrategy
         $totalSynced = 0;
 
         // 2. Select those records with the UUID and bulk insert into BigQuery in batches
-        DB::table($model->getTable())
-            ->where($batchField, $syncBatchUuid)
-            ->orderBy($model->getKeyName())
-            ->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced) {
+        $query = DB::table($model->getTable())
+            ->where($batchField, $syncBatchUuid);
+
+        // Mitigation for tables without 'id' field
+        $orderBy = $model->getKeyName() ?: $batchField;
+        if ($model->getKeyName() && $model->incrementing === false && $model->getKeyType() === 'string' && $model->getKeyName() === 'id') {
+            // This is a common case for pivot models that haven't been fully configured
+            // We check if the 'id' column actually exists to be safe
+            $columnExists = false;
+            try {
+                $columnExists = \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), $model->getKeyName());
+            } catch (\Exception $e) {
+                // If we can't check, assume it doesn't and fallback to batchField
+            }
+            if (!$columnExists) {
+                $orderBy = $batchField;
+            }
+        }
+        $query->orderBy($orderBy);
+
+        $query->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced) {
                 $rows = [];
                 foreach ($records as $record) {
                     $data = $this->prepareRow($record, $model, $batchField);

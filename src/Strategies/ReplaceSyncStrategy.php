@@ -21,9 +21,23 @@ class ReplaceSyncStrategy extends SyncStrategy
         $isFirstBatch = true;
 
         // Select all records and bulk insert into BigQuery in batches
-        DB::table($model->getTable())
-            ->orderBy($model->getKeyName())
-            ->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced, &$isFirstBatch) {
+        $query = DB::table($model->getTable());
+
+        // Mitigation for tables without 'id' field
+        $orderBy = $model->getKeyName() ?: $batchField;
+        if ($model->getKeyName() && $model->incrementing === false && $model->getKeyType() === 'string' && $model->getKeyName() === 'id') {
+            $columnExists = false;
+            try {
+                $columnExists = \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), $model->getKeyName());
+            } catch (\Exception $e) {
+            }
+            if (!$columnExists) {
+                $orderBy = $batchField;
+            }
+        }
+        $query->orderBy($orderBy);
+
+        $query->chunk($batchSize, function ($records) use ($table, $model, $batchField, &$totalSynced, &$isFirstBatch) {
                 $rows = [];
                 foreach ($records as $record) {
                     $data = $this->prepareRow($record, $model, $batchField);

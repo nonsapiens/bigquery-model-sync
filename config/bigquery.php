@@ -12,4 +12,5 @@ return [
     'syncable-namespaces' => [],
     'autosync' => env('BIGQUERY_AUTOSYNC', true),
     'logging' => env('BIGQUERY_LOGGING', true),
+    'credentials' => env('BIGQUERY_CREDENTIALS'),
 ];
