@@ -50,6 +50,9 @@ class NoIdBatchSyncTest extends TestCase
              if (str_contains(strtolower($query->sql), 'order by "id"')) {
                  throw new \Exception("Found ORDER BY id in query: " . $query->sql);
              }
+             if (str_contains(strtolower($query->sql), 'order by id')) {
+                 throw new \Exception("Found ORDER BY id in query: " . $query->sql);
+             }
         });
 
         // 1. Prepare data

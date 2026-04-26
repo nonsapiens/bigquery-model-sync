@@ -14,7 +14,7 @@ class BatchSyncStrategy extends SyncStrategy
         $batchSize = $model->bigQueryBatchSize();
         $syncBatchUuid = $syncRecord->sync_batch_uuid;
 
-        $query = $model->newQuery()
+        $query = DB::table($model->getTable())
             ->whereNull($batchField);
 
         $model->filterForBigQuerySync($query);

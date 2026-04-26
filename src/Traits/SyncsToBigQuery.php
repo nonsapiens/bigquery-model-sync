@@ -71,7 +71,7 @@ trait SyncsToBigQuery
         return $this->batchSize ?? 10000;
     }
 
-    public function filterForBigQuerySync(Builder $query): void
+    public function filterForBigQuerySync($query): void
     {
         // To be overridden by model class if needed
     }
